@@ -1,0 +1,31 @@
+
+buildbot.config.saved=Configuration saved
+buildbot.config.loading=Loading configuration from %1$s
+buildbot.config.title=Config
+buildbot.config.enable=Enable
+buildbot.config.disable=Disable
+buildbot.config.source=Source file
+buildbot.config.timeout=Timeout tick
+buildbot.config.lookspeed=Camera look speed
+buildbot.config.debug=Debug mode
+
+buildbot.source.loading=Loading source file from path %1$s
+buildbot.source.notfound=Source file is not exist! construct will stop.
+buildbot.source.empty=Source is empty. construct will not execute.
+buildbot.source.loadfailed=Loading source is failed. construct will not execute.
+buildbot.source.invaild=Source is invaild. please read the syntax manual firmly.
+
+buildbot.error.nopath=%2$s can't go to next position %1$s, please make the path to there.
+buildbot.error.noblock=%3$s not have the block %1$s. please bring it and put it to %2$s
+buildbot.error.noinventory=%2$s not have the block %1$s. We tried to bring it(it allowed because there are creative mode) but inventory is full. please release something.
+buildbot.error.nobaseblock=%2$s can't place the block to %1$s. because there are no \"Base\" block. please fix it.
+buildbot.error.placetimeout=Place is timeout. please put it manually.
+
+buildbot.rotateordinal=The place at %1$s will be postponed.
+
+buildbot.blockplaceready=Ready to place the block %1$s at %2$s
+buildbot.placeingblock=Placeing a block %1$s to %2$s
+buildbot.collectingblock=Collecting a block %1$s at %2$s
+buildbot.collected=Collect complete
+buildbot.itembringed=Bringed the item %1$s
+buildbot.constructed=Construct complete

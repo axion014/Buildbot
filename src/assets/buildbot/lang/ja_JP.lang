@@ -1,0 +1,31 @@
+
+buildbot.config.saved=設定を保存しました。
+buildbot.config.loading=%1$s から設定を読み込んでいます…
+buildbot.config.title=設定
+buildbot.config.enable=有効
+buildbot.config.disable=無効
+buildbot.config.source=ソースファイル
+buildbot.config.timeout=タイムアウトtick
+buildbot.config.lookspeed=カメラ操作速度
+buildbot.config.debug=デバッグモード
+
+buildbot.source.loading=%1$s からソースを読み込んでいます…
+buildbot.source.notfound=ソースファイルがありません！建築は中止されます。
+buildbot.source.empty=ソースは空です。建築は実行されません。
+buildbot.source.loadfailed=ソースの読み込みに失敗しました。建築は実行されません。
+buildbot.source.invaild=ソースの文法が間違っています。記法を確認してください。
+
+buildbot.error.nopath=%1$s へ行くことができません。ルートを作成してください。
+buildbot.error.noblock=ブロック %1$s がありません。入手する必要があります。
+buildbot.error.noinventory=ブロック %1$s がありません。また、プレイヤーがクリエイティブモードだったため該当ブロックをインベントリに挿入しようとしましたが、インベントリが満杯のため失敗しました。いずれかのアイテムを捨ててください。
+buildbot.error.nobaseblock=隣り合うブロックがないため、%1$sにブロックを置くことができませんでした。
+buildbot.error.placetimeout=設置処理がタイムアウトしました。手動で設置をしてください。
+
+buildbot.rotateordinal=ブロック %2$s の %1$s への設置は、後回しにされます。
+
+buildbot.blockplaceready=%1$s を %2$s に設置する準備をしています…
+buildbot.placeingblock=ブロック %1$s を %2$s に設置しています…
+buildbot.collectingblock=ブロック %1$s を %2$s から除去しています…
+buildbot.collected=ブロックの除去が完了しました。
+buildbot.itembringed=%1$sをインベントリに挿入しました。
+buildbot.constructed=建築が完了しました。

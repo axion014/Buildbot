@@ -1,0 +1,10 @@
+[
+	{
+		modid: "buildbot",
+		name: "BuildBot",
+		description: "Auto-control player and build the structures.",
+		version: "1.11.2-1.0",
+		mcversion: "1.11.2",
+		authorList: ["axion014"]
+	}
+]
