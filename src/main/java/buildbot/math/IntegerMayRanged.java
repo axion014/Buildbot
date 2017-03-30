@@ -1,4 +1,4 @@
-package main.java.buildbot;
+package main.java.buildbot.math;
 
 public class IntegerMayRanged {
 	public final int value;

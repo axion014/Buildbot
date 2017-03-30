@@ -3,6 +3,7 @@ package main.java.buildbot;
 import java.util.Objects;
 import java.util.Set;
 
+import io.netty.buffer.ByteBuf;
 import main.java.buildbot.config.ConfigManager;
 import main.java.buildbot.pathfinding.PathNavigatePlayer;
 import net.minecraft.block.Block;
@@ -237,8 +238,29 @@ public class BuildBotAI {
 	public boolean isConstructed() {
 		return constructed;
 	}
+	
+	static class ItemBringRequest implements IMessage {
+		public Block block;
 
-	public static class Responder implements IMessageHandler<Result, IMessage> {
+		public ItemBringRequest() {}
+		
+		public ItemBringRequest(Block block) {
+			this.block = block;
+		}
+
+		@Override
+		public void fromBytes(ByteBuf buf) {
+			block = Block.getBlockById(buf.readInt());
+		}
+
+		@Override
+		public void toBytes(ByteBuf buf) {
+			buf.writeInt(Block.getIdFromBlock(block));
+		}
+	}
+
+
+	static class Responder implements IMessageHandler<Result, IMessage> {
 		@Override
 		public IMessage onMessage(Result message, MessageContext ctx) {
 			if (message.issuccess) Buildbot.getAI().bringingItem = false;

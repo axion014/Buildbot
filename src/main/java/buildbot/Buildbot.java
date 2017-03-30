@@ -11,7 +11,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jparsec.error.ParserException;
 
+import main.java.buildbot.BuildBotAI.ItemBringRequest;
 import main.java.buildbot.config.ConfigManager;
+import main.java.buildbot.source.SourceParser;
 import net.minecraft.block.Block;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.resources.I18n;
@@ -141,7 +143,6 @@ public class Buildbot {
 	}
 
 	public static class ItemBringer implements IMessageHandler<ItemBringRequest, IMessage> {
-
 		@Override
 		public IMessage onMessage(ItemBringRequest message, MessageContext ctx) {
 			EntityPlayerMP player = ctx.getServerHandler().playerEntity;
@@ -157,6 +158,5 @@ public class Buildbot {
 			LOGGER.warn(I18n.format("buildbot.error.noinventory", smartString(message.block), player.getName()));
 			return new Result(false);
 		}
-
 	}
 }
