@@ -12,12 +12,12 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 
 class Dataadder {
-	static List<PlaceData> bringData(StructDataUnit data, PositionMayRanged pos) {
-		List<PlaceData> set = new LinkedList<>();
+	static Set<PlaceData> bringData(StructDataUnit data, PositionMayRanged pos) {
+		Set<PlaceData> set = new HashSet<>();
 		if (pos.getRangeLevel() != data.form.dimension) throw new IllegalStateException("Wrong ranged axis count");
 		if (data.form.type == Forms.Type.CUBIC) {
 			if (data.form.dimension == 0) return Collections
-					.singletonList(new PlaceData(new BlockPos(pos.x.value, pos.y.value, pos.z.value), data.block));
+					.singleton(new PlaceData(new BlockPos(pos.x.value, pos.y.value, pos.z.value), data.block));
 			int h = data.getOption("hollow", new Integer[0]) + 3 - data.form.dimension;
 
 			for (int x = pos.x.min; x <= pos.x.max; x++) {
@@ -146,7 +146,7 @@ class Dataadder {
 		}
 		return set;
 	}
-
+	
 	private static List<Integer> michenerCircleFragment8(double radius) {
 		Vec2i current = new Vec2i(0, MathHelper.fastFloor(radius + 0.5));
 		List<Integer> list = new ArrayList<>();

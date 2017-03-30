@@ -2,7 +2,6 @@ package main.java.buildbot.source;
 
 import java.util.*;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import org.jparsec.Parser;
 import org.jparsec.Parsers;
@@ -29,9 +28,10 @@ public class SourceParser {
 	private static Parser<IntegerMayRanged> intmayrangespace;
 	private static Parser<PositionMayRanged> position;
 	private static Parser<Block> block;
-	private static Parser<List<PlaceData>> parser;
+	private static Parser<Set<PlaceData>> parser;
 	private static Parser<Forms> form;
 	private static Parser<StructDataUnit> pattern;
+	private static Parser<Void> commamayrangespace;
 
 	private SourceParser() {}
 
@@ -39,14 +39,16 @@ public class SourceParser {
 		decimal = Parsers.sequence(Scanners.isChar('-').optional(null).source(),
 			Scanners.DEC_INTEGER.or(Scanners.isChar('0').source()),
 			Patterns.FRACTION.toScanner("").optional(null).source(), (a, b, c) -> Double.valueOf(a + b + c));
-		intspace = ignoresideoption(Scanners.WHITESPACES, integer, Scanners.WHITESPACES);
+		intspace = optAroundSpace(integer);
 		intmayrange = infixlonce(integer, integer, "~", (a, b) -> new IntegerMayRanged(a, b))
 				.or(integer.map((i) -> new IntegerMayRanged(i)));
-		intmayrangespace = ignoresideoption(Scanners.WHITESPACES, intmayrange, Scanners.WHITESPACES);
+		intmayrangespace = optAroundSpace(intmayrange);
+		commamayrangespace = optAroundSpace(Scanners.isChar(','));
 
-		position = ignoresideoption(
-			Scanners.isChar('('), Parsers.sequence(intmayrangespace, Scanners.isChar(','), intmayrangespace,
-				Scanners.isChar(','), intmayrangespace, (x, d, y, d0, z) -> new PositionMayRanged(x, y, z)),
+		position = ignoresideoption(Scanners.isChar('('),
+			Parsers.sequence(intmayrangespace.followedBy(Scanners.isChar(',')),
+				intmayrangespace.followedBy(Scanners.isChar(',')), intmayrangespace,
+				(x, y, z) -> new PositionMayRanged(x, y, z)),
 			Scanners.isChar(')'));
 
 		block = Scanners.ANY_CHAR.until(Scanners.WHITESPACES)
@@ -69,35 +71,25 @@ public class SourceParser {
 					form.flags.add("bold");
 					break;
 			}
+			formparsers.add(Scanners.string(form.toString()).retn(form));
 		}
 
 		form = Parsers.sequence(Scanners.WHITESPACES, Parsers.or(formparsers)).optional(Forms.BLOCK);
-
-		form = Parsers.sequence(Scanners.WHITESPACES,
-			Parsers.or(Scanners.string(Forms.LINE.toString()).retn(Forms.LINE),
-				Scanners.string(Forms.PLANE.toString()).retn(Forms.PLANE),
-				Scanners.string(Forms.BOX.toString()).retn(Forms.BOX),
-				Scanners.string(Forms.CIRCLE.toString()).retn(Forms.CIRCLE),
-				Scanners.string(Forms.CYLINDER.toString()).retn(Forms.CYLINDER))).optional(Forms.BLOCK);
 
 		pattern = Parsers.sequence(block, form, (b, f) -> new Tuple<>(b, f)).next(o -> {
 			Map<String, Object> map = new HashMap<>();
 			Parser.Reference<Map<String, Object>> ref = Parser.newReference();
 			ref.set(Scanners.ANY_CHAR.until(Scanners.WHITESPACES.or(Scanners.isChar(':'))).source().next(key -> {
 				if (o.getSecond().options.containsKey(key))
-					return ignoresideoption(Scanners.WHITESPACES, Scanners.isChar(':'), Scanners.WHITESPACES)
-							.next(o.getSecond().getOption(key).next(value -> {
-								map.put(key, value);
-								return ignoresideoption(Scanners.WHITESPACES, Scanners.isChar(','),
-									Scanners.WHITESPACES).next(ref.get()).optional(map).retn(map);
-							}));
-				else if (o.getSecond().flags.contains(key))
-					return ignoresideoption(Scanners.WHITESPACES, Scanners.isChar(','), Scanners.WHITESPACES)
-							.next(d -> {
-								map.put(key, true);
-								return ref.get();
-							}).optional(map).retn(map);
-				return Parsers.fail("invaild option name");
+					return optAroundSpace(Scanners.isChar(':')).next(o.getSecond().getOption(key).next(value -> {
+						map.put(key, value);
+						return commamayrangespace.next(ref.get()).optional(map).retn(map);
+					}));
+				else if (o.getSecond().flags.contains(key)) return commamayrangespace.next(d -> {
+					map.put(key, true);
+					return ref.get();
+				}).optional(map).retn(map);
+				return Parsers.fail("invaild option name " + key);
 			}));
 			return ref.get().between(Scanners.isChar('('), Scanners.isChar(')')).atomic().optional(map).retn(map)
 					.map(op -> {
@@ -113,15 +105,14 @@ public class SourceParser {
 					});
 		});
 
-		parser = pattern.followedBy(Scanners.string(" " + PLACE_OP + " "))
-				.next(data -> position.map(pos -> Dataadder.bringData(data, pos))).atomic()
-				.or(Parsers.EOF.retn(Collections.emptyList()));
+		parser = infixlonce(pattern, position, PLACE_OP, (data, pos) -> Dataadder.bringData(data, pos)).atomic()
+				.or(Parsers.EOF.retn(Collections.emptySet()));
 	}
 
-	/*
-	 * static void parse(Set<PlaceData> set, String source) { for(String line :
-	 * source.split("\n")) parseLine(set, line); }
-	 */
+	public static void parse(Set<PlaceData> set, String source) {
+		for (String line : source.split("\n"))
+			parseLine(set, line);
+	}
 
 	public static void parseLine(Set<PlaceData> set, String source) {
 		if (source.indexOf('#') != -1) source = source.substring(0, source.indexOf('#'));
@@ -132,9 +123,11 @@ public class SourceParser {
 		return center.between(left.optional(null), right.optional(null));
 	}
 
+	private static <T> Parser<T> optAroundSpace(Parser<T> raw) {
+		return ignoresideoption(Scanners.WHITESPACES, raw, Scanners.WHITESPACES);
+	}
+
 	private static <L, R, T> Parser<T> infixlonce(Parser<L> left, Parser<R> right, String name, BiFunction<L, R, T> c) {
-		BiFunction<BiFunction<L, R, T>, R, Function<L, T>> rightToLeft = (op, r) -> l -> op.apply(l, r);
-		return left.next(
-			(l) -> Parsers.sequence(Scanners.string(name).retn(c), right, rightToLeft).map((func) -> func.apply(l)));
+		return left.followedBy(optAroundSpace(Scanners.string(name))).next(l -> right.map((r) -> c.apply(l, r)));
 	}
 }
