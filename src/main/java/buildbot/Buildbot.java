@@ -153,7 +153,7 @@ public class Buildbot {
 				player.inventory.mainInventory.set(empty, new ItemStack(message.block));
 				player.inventory.pickItem(empty);
 				player.inventoryContainer.detectAndSendChanges();
-				if (!player.capabilities.isCreativeMode) player.updateHeldItem();
+				player.updateHeldItem();
 				LOGGER.debug(I18n.format("buildbot.itembringed", player.inventory.getCurrentItem()));
 				return new Result(true);
 			}

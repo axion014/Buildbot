@@ -13,7 +13,7 @@ build/taskLogs
 build/libs/old_versions
 .project
 .classpath
-config
+/config
 crash-reports
 gradle-app.setting
 gradlew
