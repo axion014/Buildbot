@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -92,24 +93,25 @@ public class Buildbot {
 	private void onlogin(EntityJoinWorldEvent event) {
 		LOGGER.info(I18n.format("buildbot.source.loading", Paths.get(configs.getPropSource()).toAbsolutePath()));
 		Set<PlaceData> places = load(Paths.get(configs.getPropSource()));
-		if (places.isEmpty()) LOGGER.info(I18n.format("buildbot.source.empty"));
-		ai = new BuildBotAI((EntityPlayerSP) event.getEntity(), places);
+		if (!places.isEmpty()) ai = new BuildBotAI((EntityPlayerSP) event.getEntity(), places);
 	}
 
 	@SideOnly(Side.CLIENT)
-	private HashSet<PlaceData> load(java.nio.file.Path path) {
+	private static Set<PlaceData> load(java.nio.file.Path path) {
 		try {
-			return Files.lines(path).collect(() -> new HashSet<>(), SourceParser::parseLine, (q, r) -> q.addAll(r));
+			Set<PlaceData> places = Files.lines(path).collect(() -> new HashSet<>(), SourceParser::parseLine, (q, r) -> q.addAll(r));
+			if (places.isEmpty()) LOGGER.info(I18n.format("buildbot.source.empty"));
+			return places;
 		} catch (NoSuchFileException e) {
 			LOGGER.error(I18n.format("buildbot.source.notfound"));
 		} catch (IOException e) {
 			LOGGER.catching(e);
 			LOGGER.error(I18n.format("buildbot.source.loadfailed"));
 		} catch (ParserException e) {
-			if (configs.getPropDebug()) LOGGER.catching(e);
 			LOGGER.error(I18n.format("buildbot.source.invaild"));
+			LOGGER.error(e.getMessage());
 		}
-		throw new InternalError();
+		return Collections.emptySet();
 	}
 
 	@SubscribeEvent

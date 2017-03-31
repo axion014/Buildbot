@@ -239,7 +239,7 @@ public class BuildBotAI {
 		return constructed;
 	}
 	
-	static class ItemBringRequest implements IMessage {
+	public static class ItemBringRequest implements IMessage {
 		public Block block;
 
 		public ItemBringRequest() {}
@@ -260,7 +260,7 @@ public class BuildBotAI {
 	}
 
 
-	static class Responder implements IMessageHandler<Result, IMessage> {
+	public static class Responder implements IMessageHandler<Result, IMessage> {
 		@Override
 		public IMessage onMessage(Result message, MessageContext ctx) {
 			if (message.issuccess) Buildbot.getAI().bringingItem = false;

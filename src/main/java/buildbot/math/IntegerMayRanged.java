@@ -14,7 +14,7 @@ public class IntegerMayRanged {
 	}
 
 	public IntegerMayRanged(int a, int b) {
-		this.value = 0;
+		this.value = 0; // do not use
 		if (a > b) {
 			this.min = b;
 			this.max = a;
