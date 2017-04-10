@@ -9,6 +9,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.EntitySelectors;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.EnumFacing.Axis;
 import net.minecraft.util.math.*;
 import net.minecraft.util.math.RayTraceResult.Type;
 import net.minecraftforge.fml.relauncher.Side;
@@ -36,13 +37,39 @@ class LookTester {
 		FailCauses failcause = null;
 		for (EnumFacing face : EnumFacing.values()) {
 			reach = minecraft.playerController.getBlockReachDistance();
-			Vec3d faceVec = targetCenter.add(new Vec3d(face.getDirectionVec()).scale(0.5));
-			if (MathHelper.sqrt(faceVec.squareDistanceTo(eye)) >= reach - 0.2) {
-				failcause = FailCauses.TOO_FAR;
+			BlockPos pos = block.pos.offset(face);
+			AxisAlignedBB bb = player.world.getBlockState(pos).getCollisionBoundingBox(player.world, pos);
+			final double offset;
+			if (bb == null
+					|| face.getAxis() == Axis.X && (0.5 < bb.minY || 0.5 > bb.maxY || 0.5 < bb.minZ || 0.5 > bb.maxZ)
+					|| face.getAxis() == Axis.Y && (0.5 < bb.minX || 0.5 > bb.maxX || 0.5 < bb.minZ || 0.5 > bb.maxZ)
+					|| face.getAxis() == Axis.Z && (0.5 < bb.minX || 0.5 > bb.maxX || 0.5 < bb.minY || 0.5 > bb.maxY)) {
+				if (failcause == null) failcause = FailCauses.NO_BASE_BLOCK;
 				continue;
 			}
-			if (!player.world.isBlockFullCube(block.pos.offset(face))) {
-				if (failcause == null) failcause = FailCauses.NO_BASE_BLOCK;
+			switch (face) {
+				case UP:
+					offset = bb.minY;
+					break;
+				case DOWN:
+					offset = 1 - bb.maxY;
+					break;
+				case EAST:
+					offset = bb.minX;
+					break;
+				case WEST:
+					offset = 1 - bb.maxX;
+					break;
+				case NORTH:
+					offset = 1 - bb.maxZ;
+					break;
+				default: // south
+					offset = bb.minZ;
+					break;
+			}
+			final Vec3d faceVec = targetCenter.add(new Vec3d(face.getDirectionVec()).scale(offset + 0.5));
+			if (MathHelper.sqrt(faceVec.squareDistanceTo(eye)) >= reach - 0.2) {
+				failcause = FailCauses.TOO_FAR;
 				continue;
 			}
 			failcause = FailCauses.BLOCKED;
@@ -99,7 +126,7 @@ class LookTester {
 		}
 		return new PlaceTestResult(failcause);
 	}
-	
+
 	LookTestResult getCanLookAt(BlockPos target) {
 		return getCanLookAt(new Vec3d(target).addVector(0.5, 0.5, 0.5));
 	}
@@ -162,7 +189,7 @@ class LookTester {
 		if (result.typeOfHit == Type.MISS) return new LookTestResult(false);
 		return new LookTestResult(FailCauses.BLOCKED);
 	}
-	
+
 	boolean canLookAt(BlockPos target) {
 		return getCanLookAt(target).issuccess;
 	}
@@ -195,7 +222,7 @@ class PlaceTestResult {
 	final boolean issuccess;
 	final EnumFacing placableface;
 	final FailCauses cause;
-	
+
 	PlaceTestResult(EnumFacing face) {
 		issuccess = true;
 		placableface = face;
