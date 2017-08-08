@@ -1,5 +1,10 @@
 package main.java.buildbot.math;
 
+import javax.annotation.concurrent.Immutable;
+
+import net.minecraft.util.math.Vec3i;
+
+@Immutable
 public class PositionMayRanged {
 	public final IntegerMayRanged x;
 	public final IntegerMayRanged y;
@@ -20,5 +25,9 @@ public class PositionMayRanged {
 			if (z.ranged) rangeLevel++;
 		}
 		return rangeLevel;
+	}
+	
+	public PositionMayRanged add(Vec3i pos) {
+		return new PositionMayRanged(x.add(pos.getX()), y.add(pos.getY()), z.add(pos.getZ()));
 	}
 }

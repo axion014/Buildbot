@@ -2,15 +2,16 @@
 buildbot.config.saved=Configuration saved
 buildbot.config.loading=Loading configuration from %1$s
 buildbot.config.title=Config
-buildbot.config.enable=Enable
-buildbot.config.disable=Disable
-buildbot.config.source=Source file
 buildbot.config.timeout=Timeout tick
+buildbot.config.delay=Delay tick
 buildbot.config.lookspeed=Camera look speed
-buildbot.config.debug=Debug mode
+
+buildbot.command.build.usage=/build <build command | sourcefile | "stop">
+buildbot.command.build.workdiris=The working directory is %1$s.
+buildbot.command.build.success=The build command successly loaded
+buildbot.command.build.invaild=The build command is invaild. please read the syntax manual firmly.
 
 buildbot.source.loading=Loading source file from path %1$s
-buildbot.source.notfound=Source file is not exist! construct will stop.
 buildbot.source.empty=Source is empty. construct will not execute.
 buildbot.source.loadfailed=Loading source is failed. construct will not execute.
 buildbot.source.invaild=Source is invaild. please read the syntax manual firmly.

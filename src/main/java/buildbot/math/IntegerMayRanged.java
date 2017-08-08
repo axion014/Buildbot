@@ -1,5 +1,8 @@
 package main.java.buildbot.math;
 
+import javax.annotation.concurrent.Immutable;
+
+@Immutable
 public class IntegerMayRanged {
 	public final int value;
 	public final int min;
@@ -22,6 +25,10 @@ public class IntegerMayRanged {
 			this.min = a;
 			this.max = b;
 		}
-		this.ranged = true;
+		this.ranged = a != b;
+	}
+	
+	public IntegerMayRanged add(int i) {
+		return ranged ? new IntegerMayRanged(min + i, max + i) : new IntegerMayRanged(value + i);
 	}
 }

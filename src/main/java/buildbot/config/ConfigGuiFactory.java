@@ -30,9 +30,8 @@ public class ConfigGuiFactory implements IModGuiFactory {
 		private static List<IConfigElement> getConfigElements() {
 			ConfigManager configs = ConfigManager.get();
 			List<IConfigElement> list = new ArrayList<>();
-			list.add(new ConfigElement(configs.ENABLE));
-			list.add(new ConfigElement(configs.SOURCE));
 			list.add(new ConfigElement(configs.TIMEOUT));
+			list.add(new ConfigElement(configs.DELAY));
 			list.add(new ConfigElement(configs.LOOKSPD));
 			return list;
 		}

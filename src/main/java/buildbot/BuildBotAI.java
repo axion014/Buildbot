@@ -1,5 +1,6 @@
 package main.java.buildbot;
 
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
@@ -15,13 +16,13 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.RayTraceResult.Type;
 import net.minecraft.util.math.Vec3d;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-import net.minecraft.util.math.RayTraceResult.Type;
 
 @SideOnly(Side.CLIENT)
 public class BuildBotAI {
@@ -35,6 +36,7 @@ public class BuildBotAI {
 	private Set<PlaceData> places;
 	private PlaceData place;
 	private String lastError;
+	private int placeDelay;
 	private int timeOut;
 	private boolean stopping;
 	private boolean constructed;
@@ -44,6 +46,11 @@ public class BuildBotAI {
 		this.places = places;
 		navigate = new PathNavigatePlayer(player, player.world);
 		lookTester = new LookTester(player);
+		placeDelay = 0;
+	}
+
+	public BuildBotAI(EntityPlayerSP player) {
+		this(player, new HashSet<>());
 	}
 
 	public void update() {
@@ -51,11 +58,17 @@ public class BuildBotAI {
 		boolean flag = false;
 		while (place == null || place.block == player.world.getBlockState(place.pos).getBlock()) {
 			KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindSneak.getKeyCode(), false);
-			if (nextBlock()) flag = true;
-			else {
+			if (nextBlock()) {
+				flag = true;
+				placeDelay = ConfigManager.get().getPropDelay();
+			} else {
 				constructed = true;
 				return;
 			}
+		}
+		if (placeDelay > 0) {
+			placeDelay--;
+			return;
 		}
 		if (flag) Buildbot.LOGGER.debug(I18n.format("buildbot.blockplaceready", Buildbot.smartString(place.block),
 			Buildbot.smartString(place.pos)));
@@ -88,7 +101,10 @@ public class BuildBotAI {
 								Buildbot.smartString(place.pos)));
 							placeBlock();
 						}
-					} else navigate.getLookHelper().relook();
+					} else {
+						Buildbot.LOGGER.debug("place failed, retrying...");
+						navigate.getLookHelper().relook();
+					}
 				} else synchronized (this) {
 					if (!bringingItem) {
 						if (player.isCreative()) {
@@ -234,16 +250,21 @@ public class BuildBotAI {
 		this.places = places;
 		constructed = false;
 	}
+	
+	public void addPlaceData(Set<PlaceData> places) {
+		this.places.addAll(places);
+		constructed = false;
+	}
 
 	public boolean isConstructed() {
 		return constructed;
 	}
-	
+
 	public static class ItemBringRequest implements IMessage {
 		public Block block;
 
 		public ItemBringRequest() {}
-		
+
 		public ItemBringRequest(Block block) {
 			this.block = block;
 		}
@@ -259,11 +280,12 @@ public class BuildBotAI {
 		}
 	}
 
-
 	public static class Responder implements IMessageHandler<Result, IMessage> {
 		@Override
 		public IMessage onMessage(Result message, MessageContext ctx) {
-			if (message.issuccess) Buildbot.getAI().bringingItem = false;
+			if (message.issuccess) synchronized (Buildbot.getAI()) {
+				Buildbot.getAI().bringingItem = false;
+			}
 			return null;
 		}
 	}

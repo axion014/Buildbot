@@ -17,6 +17,7 @@ import main.java.buildbot.math.PositionMayRanged;
 import net.minecraft.block.Block;
 import net.minecraft.util.EnumFacing.Axis;
 import net.minecraft.util.Tuple;
+import net.minecraft.util.math.BlockPos;
 
 public class SourceParser {
 	private static final String PLACE_OP = "at";
@@ -25,27 +26,32 @@ public class SourceParser {
 	private static Parser<Double> decimal = Parsers.sequence(Scanners.isChar('-').optional(null).source(),
 		Scanners.DEC_INTEGER.or(Scanners.isChar('0').source()), Patterns.FRACTION.toScanner("").optional(null).source(),
 		(a, b, c) -> Double.valueOf(a + b + c));
-	@SuppressWarnings("unused")
 	private static Parser<Integer> intspace;
 	private static Parser<IntegerMayRanged> intmayrange;
 	private static Parser<IntegerMayRanged> intmayrangespace;
-	private static Parser<PositionMayRanged> position;
+	private static Parser<BlockPos> position;
+	private static Parser<PositionMayRanged> positionmayrange;
 	private static Parser<Block> block;
-	private static Parser<Set<PlaceData>> parser;
 	private static Parser<Forms> form;
 	private static Parser<StructDataUnit> pattern;
 	private static Parser<Void> commamayrangespace = optAroundSpace(Scanners.isChar(','));
 	private static Parser<List<Block>> multipleblock;
-
-	private SourceParser() {}
+	private Parser<Set<PlaceData>> parser;
+	private BlockPos offset;
 
 	static {
 		intspace = optAroundSpace(integer);
 		intmayrange = infixlonce(integer, integer, "~", (a, b) -> new IntegerMayRanged(a, b))
 				.or(integer.map((i) -> new IntegerMayRanged(i)));
 		intmayrangespace = optAroundSpace(intmayrange);
-
+		
 		position = ignoresideoption(Scanners.isChar('('),
+			Parsers.sequence(intspace.followedBy(Scanners.isChar(',')),
+				intspace.followedBy(Scanners.isChar(',')), intspace,
+				(x, y, z) -> new BlockPos(x, y, z)),
+			Scanners.isChar(')'));
+
+		positionmayrange = ignoresideoption(Scanners.isChar('('),
 			Parsers.sequence(intmayrangespace.followedBy(Scanners.isChar(',')),
 				intmayrangespace.followedBy(Scanners.isChar(',')), intmayrangespace,
 				(x, y, z) -> new PositionMayRanged(x, y, z)),
@@ -124,17 +130,35 @@ public class SourceParser {
 						return new StructDataUnit(o.getFirst(), o.getSecond(), op);
 					});
 		});
-
-		parser = infixloncespacerequired(pattern, position, PLACE_OP, (data, pos) -> Dataadder.bringData(data, pos))
-				.atomic().or(Parsers.EOF.retn(Collections.emptySet()));
+	}
+	
+	public SourceParser() {
+		offset = new BlockPos(0, 0, 0);
+		parser = Parsers.or(Parsers.sequence(Scanners.string("offset"), Scanners.WHITESPACES, position).map((pos) -> {
+			offset = pos;
+			return Collections.emptySet();
+		}), infixloncespacerequired(pattern, positionmayrange, PLACE_OP, (data, pos) -> Dataadder.bringData(data, pos.add(offset)))
+				.atomic(), Parsers.EOF.retn(Collections.emptySet()));
+	}
+	
+	public Set<PlaceData> parse(String source) {
+		Set<PlaceData> set = new HashSet<>();
+		parse(set, source);
+		return set;
 	}
 
-	public static void parse(Set<PlaceData> set, String source) {
+	public void parse(Set<PlaceData> set, String source) {
 		for (String line : source.split("\n"))
 			parseLine(set, line);
 	}
+	
+	public Set<PlaceData> parseLine(String source) {
+		Set<PlaceData> set = new HashSet<>();
+		parseLine(set, source);
+		return set;
+	}
 
-	public static void parseLine(Set<PlaceData> set, String source) {
+	public void parseLine(Set<PlaceData> set, String source) {
 		if (source.indexOf('#') != -1) source = source.substring(0, source.indexOf('#'));
 		set.addAll(parser.parse(source));
 	}

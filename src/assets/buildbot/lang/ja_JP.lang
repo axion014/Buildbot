@@ -2,15 +2,16 @@
 buildbot.config.saved=設定を保存しました。
 buildbot.config.loading=%1$s から設定を読み込んでいます…
 buildbot.config.title=設定
-buildbot.config.enable=有効
-buildbot.config.disable=無効
-buildbot.config.source=ソースファイル
 buildbot.config.timeout=タイムアウトtick
+buildbot.config.delay=ブロック設置間隔tick
 buildbot.config.lookspeed=カメラ操作速度
-buildbot.config.debug=デバッグモード
+
+buildbot.command.build.usage=/build <建築コマンド | ソースファイルのパス | stop>
+buildbot.command.build.workdiris=%1$s が作業ディレクトリとして使用されます。
+buildbot.command.build.success=建築コマンドの読み込みに成功しました
+buildbot.command.build.invaild=建築コマンドの文法が間違っています。記法を確認してください。
 
 buildbot.source.loading=%1$s からソースを読み込んでいます…
-buildbot.source.notfound=ソースファイルがありません！建築は中止されます。
 buildbot.source.empty=ソースは空です。建築は実行されません。
 buildbot.source.loadfailed=ソースの読み込みに失敗しました。建築は実行されません。
 buildbot.source.invaild=ソースの文法が間違っています。記法を確認してください。

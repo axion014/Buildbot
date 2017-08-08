@@ -1,16 +1,7 @@
 package main.java.buildbot;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jparsec.error.ParserException;
 
 import main.java.buildbot.BuildBotAI.ItemBringRequest;
 import main.java.buildbot.config.ConfigManager;
@@ -22,20 +13,18 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.pathfinding.Path;
 import net.minecraft.util.math.Vec3i;
+import net.minecraftforge.client.ClientCommandHandler;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLServerStoppingEvent;
+import net.minecraftforge.fml.common.event.*;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.PlayerTickEvent;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
 import net.minecraftforge.fml.common.network.simpleimpl.*;
 import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
 
 @Mod(modid = Buildbot.MODID, useMetadata = true, guiFactory = "main.java.buildbot.config.ConfigGuiFactory")
 public class Buildbot {
@@ -43,10 +32,12 @@ public class Buildbot {
 	public static final double DEFAULT_LOOK_SPEED = 9.0;
 	static final double WALK_SPEED = 4.0;
 	public static final int DEFAULT_TIMEOUT = 20; // Unit is tick(0.05sec)
+	public static final int DEFAULT_DELAY = 5; // Unit is tick(0.05sec)
 	public static final String DEFAULT_SOURCE = "./source.struct";
 	public static final Logger LOGGER = LogManager.getLogger(MODID);
 	private ConfigManager configs;
 	private BuildBotAI ai;
+	public SourceParser parser;
 	private static Buildbot instance;
 	public static final SimpleNetworkWrapper packetChannel = NetworkRegistry.INSTANCE.newSimpleChannel(MODID);
 
@@ -71,9 +62,11 @@ public class Buildbot {
 
 	@EventHandler
 	public void load(FMLInitializationEvent event) {
-		MinecraftForge.EVENT_BUS.register(this);
+		MinecraftForge.EVENT_BUS.register(this); // @SubscribeEvent で登録したリスナを有効にする
+		// パケットの通り道を作成
 		packetChannel.registerMessage(ItemBringer.class, ItemBringRequest.class, 0, Side.SERVER);
 		packetChannel.registerMessage(BuildBotAI.Responder.class, Result.class, 1, Side.CLIENT);
+		ClientCommandHandler.instance.registerCommand(new CommandBuild()); // コマンドを登録
 	}
 
 	@SubscribeEvent
@@ -91,37 +84,19 @@ public class Buildbot {
 	}
 
 	private void onlogin(EntityJoinWorldEvent event) {
-		LOGGER.info(I18n.format("buildbot.source.loading", Paths.get(configs.getPropSource()).toAbsolutePath()));
-		Set<PlaceData> places = load(Paths.get(configs.getPropSource()));
-		if (!places.isEmpty()) ai = new BuildBotAI((EntityPlayerSP) event.getEntity(), places);
-	}
-
-	@SideOnly(Side.CLIENT)
-	private static Set<PlaceData> load(java.nio.file.Path path) {
-		try {
-			Set<PlaceData> places = Files.lines(path).collect(() -> new HashSet<>(), SourceParser::parseLine, (q, r) -> q.addAll(r));
-			if (places.isEmpty()) LOGGER.info(I18n.format("buildbot.source.empty"));
-			return places;
-		} catch (NoSuchFileException e) {
-			LOGGER.error(I18n.format("buildbot.source.notfound"));
-		} catch (IOException e) {
-			LOGGER.catching(e);
-			LOGGER.error(I18n.format("buildbot.source.loadfailed"));
-		} catch (ParserException e) {
-			LOGGER.error(I18n.format("buildbot.source.invaild"));
-			LOGGER.error(e.getMessage());
-		}
-		return Collections.emptySet();
+		parser = new SourceParser();
+		ai = new BuildBotAI((EntityPlayerSP) event.getEntity());
 	}
 
 	@SubscribeEvent
 	public void onTick(PlayerTickEvent e) {
-		if (ai != null && !ai.isConstructed() && configs.getPropEnable() && e.side.isClient()) {
+		if (ai != null && !ai.isConstructed() && e.side.isClient()) {
 			ai.update();
 			if (ai.isConstructed()) Buildbot.LOGGER.info(I18n.format("buildbot.constructed"));
 		}
 	}
 
+	// デバッグメッセージの整形に使用
 	public static String smartString(Object obj) {
 		if (obj instanceof Vec3i)
 			return "(" + ((Vec3i) obj).getX() + ", " + ((Vec3i) obj).getY() + ", " + ((Vec3i) obj).getZ() + ")";

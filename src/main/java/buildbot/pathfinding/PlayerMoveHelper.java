@@ -70,19 +70,19 @@ public class PlayerMoveHelper {
 			double d1 = posZ - player.posZ;
 			double d2 = posY - player.posY;
 
-			if (d0 * d0 + d2 * d2 + d1 * d1 < 2.500000277905201E-7D) {
+			if (d0 * d0 + d2 * d2 + d1 * d1 < 0.25) {
 				moveForward = 0.0F;
 				return;
 			}
 
 			player.rotationYaw = limitAngle(player.rotationYaw,
 				(float) (MathHelper.atan2(d1, d0) * (180D / Math.PI) - 90.0),
-				(float) ConfigManager.get().getPropLookspeed());
+				(float) Math.max(ConfigManager.get().getPropLookspeed(), 10.0));
 			moveForward = (float) (speed
 					* player.getEntityAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).getAttributeValue()
 					* (player.isSprinting() ? 2 : 1));
 
-			if (d2 > player.stepHeight && d0 * d0 + d1 * d1 < Math.max(1.0F, player.width)) {
+			if (d2 > (player.capabilities.isFlying ? -1.0 : player.stepHeight) && d0 * d0 + d1 * d1 < Math.max(1.0F, player.width)) {
 				if (d2 > 1.6) {
 					if (player.capabilities.allowFlying) {
 						if (!player.capabilities.isFlying) {
