@@ -28,6 +28,10 @@ public class PositionMayRanged {
 	}
 	
 	public PositionMayRanged add(Vec3i pos) {
-		return new PositionMayRanged(x.add(pos.getX()), y.add(pos.getY()), z.add(pos.getZ()));
+		return add(pos.getX(), pos.getY(), pos.getZ());
+	}
+
+	public PositionMayRanged add(int x, int y, int z) {
+		return new PositionMayRanged(this.x.add(x), this.y.add(y), this.z.add(z));
 	}
 }

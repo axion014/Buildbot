@@ -19,9 +19,11 @@ import main.java.buildbot.PlaceData;
 import main.java.buildbot.math.IntegerMayRanged;
 import main.java.buildbot.math.PositionMayRanged;
 import net.minecraft.block.Block;
+import net.minecraft.client.Minecraft;
 import net.minecraft.util.EnumFacing.Axis;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 
 public class SourceParser {
 	private static final String PLACE_OP = "at";
@@ -54,15 +56,19 @@ public class SourceParser {
 		intmayrangespace = optAroundSpace(intmayrange);
 		
 		position = ignoresideoption(Scanners.isChar('('),
-			Parsers.sequence(intspace.followedBy(Scanners.isChar(',')),
+			Parsers.sequence(Scanners.isChar('~').retn(true).optional(false), intspace.followedBy(Scanners.isChar(',')),
 				intspace.followedBy(Scanners.isChar(',')), intspace,
-				(x, y, z) -> new BlockPos(x, y, z)),
+				(p, x, y, z) -> p ? new BlockPos(MathHelper.floor(Minecraft.getMinecraft().player.posX) + x,
+				MathHelper.floor(Minecraft.getMinecraft().player.posY) + y,
+				MathHelper.floor(Minecraft.getMinecraft().player.posZ) + z) : new BlockPos(x, y, z)),
 			Scanners.isChar(')'));
 
 		positionmayrange = ignoresideoption(Scanners.isChar('('),
-			Parsers.sequence(intmayrangespace.followedBy(Scanners.isChar(',')),
+			Parsers.sequence(Scanners.isChar('~').retn(true).optional(false), intmayrangespace.followedBy(Scanners.isChar(',')),
 				intmayrangespace.followedBy(Scanners.isChar(',')), intmayrangespace,
-				(x, y, z) -> new PositionMayRanged(x, y, z)),
+				(p, x, y, z) -> p ? new PositionMayRanged(x, y, z).add(
+				MathHelper.floor(Minecraft.getMinecraft().player.posX), MathHelper.floor(Minecraft.getMinecraft().player.posY),
+				MathHelper.floor(Minecraft.getMinecraft().player.posZ)) : new PositionMayRanged(x, y, z)),
 			Scanners.isChar(')'));
 
 		block = Scanners.ANY_CHAR.until(Scanners.WHITESPACES.or(Scanners.isChar(',')).or(Scanners.isChar(')')))
