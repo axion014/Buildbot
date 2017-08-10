@@ -18,6 +18,7 @@ import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult.Type;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
@@ -54,7 +55,6 @@ public class BuildBotAI {
 	}
 
 	public void update() {
-		float lookspeed = (float) ConfigManager.get().getPropLookspeed();
 		boolean flag = false;
 		while (place == null || place.block == player.world.getBlockState(place.pos).getBlock()) {
 			KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindSneak.getKeyCode(), false);
@@ -83,6 +83,7 @@ public class BuildBotAI {
 		if (stopping) return;
 		PlaceTestResult result = lookTester.getCanPlaceBlockAt(place);
 		Vec3d targetCenter = new Vec3d(place.pos).addVector(0.5, 0.5, 0.5);
+		float lookspeed = (float) ConfigManager.get().getPropLookspeed();
 		if (result.issuccess) {
 			navigate.clearPathEntity();
 			KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindSneak.getKeyCode(), true);
@@ -113,7 +114,7 @@ public class BuildBotAI {
 							lastError = null;
 						} else {
 							if (checkAndSetLastError("no block")) return;
-							Buildbot.LOGGER.warn(I18n.format("buildbot.error.noblock",
+							player.sendMessage(new TextComponentTranslation("buildbot.error.noblock",
 								Buildbot.smartString(place.block), Buildbot.smartString(place.pos), player.getName()));
 							stopping = true;
 						}
@@ -125,7 +126,7 @@ public class BuildBotAI {
 				case NO_BASE_BLOCK:
 					if (place.errored) {
 						if (checkAndSetLastError(FailCauses.NO_BASE_BLOCK.name())) return;
-						Buildbot.LOGGER.warn(I18n.format("buildbot.error.nobaseblock", Buildbot.smartString(place.pos),
+						player.sendMessage(new TextComponentTranslation("buildbot.error.nobaseblock", Buildbot.smartString(place.pos),
 							player.getName()));
 					} else rotatePlaceOrdinal();
 					break;
@@ -155,8 +156,7 @@ public class BuildBotAI {
 					}
 					if (place.errored) {
 						if (checkAndSetLastError("can't go to next position")) return;
-						Buildbot.LOGGER.warn(
-							I18n.format("buildbot.error.nopath", Buildbot.smartString(place.pos), player.getName()));
+						player.sendMessage(new TextComponentTranslation("buildbot.error.nopath", Buildbot.smartString(place.pos), player.getName()));
 					} else rotatePlaceOrdinal();
 			}
 		}
@@ -248,6 +248,7 @@ public class BuildBotAI {
 
 	public void setPlaceData(Set<PlaceData> places) {
 		this.places = places;
+		place = null;
 		constructed = false;
 	}
 	

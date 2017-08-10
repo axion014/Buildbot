@@ -1,5 +1,9 @@
 package main.java.buildbot.source;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.BiFunction;
 
@@ -36,8 +40,12 @@ public class SourceParser {
 	private static Parser<StructDataUnit> pattern;
 	private static Parser<Void> commamayrangespace = optAroundSpace(Scanners.isChar(','));
 	private static Parser<List<Block>> multipleblock;
-	private Parser<Set<PlaceData>> parser;
-	private BlockPos offset;
+	private static Parser<Set<PlaceData>> parser;
+	private static BlockPos offset = new BlockPos(0, 0, 0);
+	private static Parser<String> file;
+	
+	private SourceParser() {
+	}
 
 	static {
 		intspace = optAroundSpace(integer);
@@ -130,37 +138,33 @@ public class SourceParser {
 						return new StructDataUnit(o.getFirst(), o.getSecond(), op);
 					});
 		});
-	}
-	
-	public SourceParser() {
-		offset = new BlockPos(0, 0, 0);
-		parser = Parsers.or(Parsers.sequence(Scanners.string("offset"), Scanners.WHITESPACES, position).map((pos) -> {
-			offset = pos;
-			return Collections.emptySet();
-		}), infixloncespacerequired(pattern, positionmayrange, PLACE_OP, (data, pos) -> Dataadder.bringData(data, pos.add(offset)))
+		file = Scanners.many1(CharPredicates.ALWAYS).between(Scanners.isChar('"'), Scanners.isChar('"'))
+				.or(Scanners.many1(CharPredicates.not(CharPredicates.IS_WHITESPACE))).source().next((path) -> {
+			if (Files.exists(Paths.get(path))) {
+				try {
+					return Parsers.constant(new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8));
+				} catch (IOException e) {
+					return Parsers.fail(e.getLocalizedMessage());
+				}
+			}
+			return Parsers.fail("Invaild path");
+		});
+		parser = Parsers.or(infixloncespacerequired(file, position, PLACE_OP, (data, pos) -> {
+			offset = offset.add(pos);
+			Set<PlaceData> result = parse(data);
+			offset = offset.subtract(pos);
+			return result;
+		}).atomic(), file.map(SourceParser::parse), infixloncespacerequired(pattern, positionmayrange, PLACE_OP, (data, pos) -> Dataadder.bringData(data, pos.add(offset)))
 				.atomic(), Parsers.EOF.retn(Collections.emptySet()));
 	}
 	
-	public Set<PlaceData> parse(String source) {
+	public static Set<PlaceData> parse(String source) {
 		Set<PlaceData> set = new HashSet<>();
-		parse(set, source);
+		for (String line : source.split("\n")) {
+			if (line.indexOf('#') != -1) line = line.substring(0, line.indexOf('#'));
+			set.addAll(parser.parse(line));
+		}
 		return set;
-	}
-
-	public void parse(Set<PlaceData> set, String source) {
-		for (String line : source.split("\n"))
-			parseLine(set, line);
-	}
-	
-	public Set<PlaceData> parseLine(String source) {
-		Set<PlaceData> set = new HashSet<>();
-		parseLine(set, source);
-		return set;
-	}
-
-	public void parseLine(Set<PlaceData> set, String source) {
-		if (source.indexOf('#') != -1) source = source.substring(0, source.indexOf('#'));
-		set.addAll(parser.parse(source));
 	}
 
 	private static <T> Parser<T> ignoresideoption(Parser<?> left, Parser<T> center, Parser<?> right) {

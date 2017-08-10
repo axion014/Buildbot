@@ -6,15 +6,11 @@ buildbot.config.timeout=タイムアウトtick
 buildbot.config.delay=ブロック設置間隔tick
 buildbot.config.lookspeed=カメラ操作速度
 
-buildbot.command.build.usage=/build <建築コマンド | ソースファイルのパス | stop>
+buildbot.command.build.usage=/build <建築コマンド | stop>
 buildbot.command.build.workdiris=%1$s が作業ディレクトリとして使用されます。
 buildbot.command.build.success=建築コマンドの読み込みに成功しました
 buildbot.command.build.invaild=建築コマンドの文法が間違っています。記法を確認してください。
-
-buildbot.source.loading=%1$s からソースを読み込んでいます…
-buildbot.source.empty=ソースは空です。建築は実行されません。
-buildbot.source.loadfailed=ソースの読み込みに失敗しました。建築は実行されません。
-buildbot.source.invaild=ソースの文法が間違っています。記法を確認してください。
+buildbot.command.build.stop=停止しています…
 
 buildbot.error.nopath=%1$s へ行くことができません。ルートを作成してください。
 buildbot.error.noblock=ブロック %1$s がありません。入手する必要があります。

@@ -6,15 +6,11 @@ buildbot.config.timeout=Timeout tick
 buildbot.config.delay=Delay tick
 buildbot.config.lookspeed=Camera look speed
 
-buildbot.command.build.usage=/build <build command | sourcefile | "stop">
+buildbot.command.build.usage=/build <build command | "stop">
 buildbot.command.build.workdiris=The working directory is %1$s.
 buildbot.command.build.success=The build command successly loaded
 buildbot.command.build.invaild=The build command is invaild. please read the syntax manual firmly.
-
-buildbot.source.loading=Loading source file from path %1$s
-buildbot.source.empty=Source is empty. construct will not execute.
-buildbot.source.loadfailed=Loading source is failed. construct will not execute.
-buildbot.source.invaild=Source is invaild. please read the syntax manual firmly.
+buildbot.command.build.stop=Stopping...
 
 buildbot.error.nopath=%2$s can't go to next position %1$s, please make the path to there.
 buildbot.error.noblock=%3$s not have the block %1$s. please bring it and put it to %2$s

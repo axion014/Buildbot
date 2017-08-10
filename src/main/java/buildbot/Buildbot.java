@@ -5,7 +5,6 @@ import org.apache.logging.log4j.Logger;
 
 import main.java.buildbot.BuildBotAI.ItemBringRequest;
 import main.java.buildbot.config.ConfigManager;
-import main.java.buildbot.source.SourceParser;
 import net.minecraft.block.Block;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.resources.I18n;
@@ -19,7 +18,9 @@ import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
-import net.minecraftforge.fml.common.event.*;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStoppingEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.PlayerTickEvent;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
@@ -33,11 +34,9 @@ public class Buildbot {
 	static final double WALK_SPEED = 4.0;
 	public static final int DEFAULT_TIMEOUT = 20; // Unit is tick(0.05sec)
 	public static final int DEFAULT_DELAY = 5; // Unit is tick(0.05sec)
-	public static final String DEFAULT_SOURCE = "./source.struct";
 	public static final Logger LOGGER = LogManager.getLogger(MODID);
 	private ConfigManager configs;
 	private BuildBotAI ai;
-	public SourceParser parser;
 	private static Buildbot instance;
 	public static final SimpleNetworkWrapper packetChannel = NetworkRegistry.INSTANCE.newSimpleChannel(MODID);
 
@@ -84,7 +83,6 @@ public class Buildbot {
 	}
 
 	private void onlogin(EntityJoinWorldEvent event) {
-		parser = new SourceParser();
 		ai = new BuildBotAI((EntityPlayerSP) event.getEntity());
 	}
 

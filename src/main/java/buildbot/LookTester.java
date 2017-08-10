@@ -20,7 +20,7 @@ class LookTester {
 	private EntityPlayer player;
 	private Minecraft minecraft = Minecraft.getMinecraft();
 
-	public LookTester(EntityPlayer player) {
+	LookTester(EntityPlayer player) {
 		this.player = player;
 	}
 

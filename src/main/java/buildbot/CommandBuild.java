@@ -1,12 +1,7 @@
 package main.java.buildbot;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.util.HashSet;
-import java.util.Set;
 
 import org.jparsec.error.ParserException;
 
@@ -43,31 +38,16 @@ public class CommandBuild extends CommandBase {
 			return;
 		}
 		if (args.length == 1 && args[0].equals("stop")) {
+			sender.sendMessage(new TextComponentTranslation("buildbot.command.build.stop"));
 			Buildbot.getAI().setPlaceData(new HashSet<>());
 			return;
 		}
 		try {
-			byte[] bytes = Files.readAllBytes(Paths.get(arg));
-			Buildbot.LOGGER.info(I18n.format("buildbot.source.loading", Paths.get(arg).toAbsolutePath()));
-			Set<PlaceData> places = new SourceParser().parse(new String(bytes, StandardCharsets.UTF_8));
-			if (places.isEmpty()) Buildbot.LOGGER.info(I18n.format("buildbot.source.empty"));
-			else {
-				Buildbot.getAI().addPlaceData(places);
-				Buildbot.LOGGER.info(I18n.format("buildbot.command.build.success"));
-			}
-		} catch (NoSuchFileException e) {
-			try {
-				Buildbot.getAI().addPlaceData(Buildbot.getBuildbot().parser.parseLine(arg));
-				Buildbot.LOGGER.info(I18n.format("buildbot.command.build.success"));
-			} catch (ParserException ex) {
-				throw new CommandException("buildbot.command.build.invaild", ex);
-			}
-		} catch (IOException e) {
-			Buildbot.LOGGER.catching(e);
-			Buildbot.LOGGER.error(I18n.format("buildbot.source.loadfailed"));
-		} catch (ParserException e) {
-			Buildbot.LOGGER.error(I18n.format("buildbot.source.invaild"));
-			Buildbot.LOGGER.error(e.getMessage());
+			Buildbot.getAI().addPlaceData(SourceParser.parse(arg));
+			sender.sendMessage(new TextComponentTranslation("buildbot.command.build.success"));
+		} catch (ParserException ex) {
+			Buildbot.LOGGER.info(ex);
+			throw new CommandException("buildbot.command.build.invaild");
 		}
 	}
 
