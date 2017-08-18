@@ -2,7 +2,9 @@ package main.java.buildbot.source;
 
 import java.util.*;
 
+import main.java.buildbot.Buildbot;
 import main.java.buildbot.PlaceData;
+import main.java.buildbot.math.DoubleMayRanged;
 import main.java.buildbot.math.PositionMayRanged;
 import main.java.buildbot.math.Vec2i;
 import main.java.buildbot.source.Forms;
@@ -15,6 +17,8 @@ import net.minecraft.util.math.Vec3i;
 
 class Dataadder {
 	static Set<PlaceData> bringData(StructDataUnit data, PositionMayRanged pos) {
+		Buildbot.LOGGER.info("options is:");
+		data.options.forEach((k, v) -> Buildbot.LOGGER.info("  " + k + ": " + v));
 		Set<PlaceData> set = new HashSet<>();
 		if (pos.getRangeLevel() != data.form.dimension) throw new IllegalStateException("Wrong ranged axis count");
 		if (data.form == Forms.BLOCK) return Collections
@@ -62,17 +66,47 @@ class Dataadder {
 				}
 			}
 		} else if (data.form.type == Forms.Type.CIRCULER) {
+			if (((boolean) data.getOption("fill")) && ((boolean) data.getOption("bold"))) throw new IllegalArgumentException("fill and bold can't assign both");
 			int h = data.getOption("hollow", new Integer[0]);
 			Axis axis = data.getOption("axis");
-			double radius = data.getOption("radius");
+			DoubleMayRanged radiusrange = data.getOption("radius");
+			if (pos.getRangeLevel() == 0 && radiusrange.ranged) throw new IllegalStateException("Circle radius can't have range");
 			switch (axis) {
 				case X:
 					if (pos.y.ranged || pos.z.ranged) throw new IllegalStateException();
 					for (int x = pos.x.min; x <= pos.x.max; x++) {
+						double radius = radiusrange.getByRatio(((double) -(pos.x.min - x)) / (pos.x.max - pos.x.min));
 						data.nextBlock();
 						if (data.form.dimension >= h || x == pos.x.min || x == pos.x.max) {
 							final Vec2i center = new Vec2i(pos.z.value, pos.y.value);
-							if (!(boolean) data.getOption("bold")) {
+							if ((boolean) data.getOption("fill")) {
+								List<Integer> ylist = michenerCircleFragment4(radius);
+								for (int z = 0; z < ylist.size(); z++) {
+									int y = ylist.get(z);
+									for (int yl = y; yl >= -y; yl--) {
+										set.add(new PlaceData(x, yl + center.y, z + center.x, data.currentBlock()));
+										set.add(new PlaceData(x, yl + center.y, -z + center.x, data.currentBlock()));
+									}
+								}
+							} else if ((boolean) data.getOption("bold")) {
+								List<Integer> ylisti = michenerCircleFragment4(radius - 0.5);
+								List<Integer> ylisto = michenerCircleFragment4(radius + 0.5);
+								for (int z = 0; z < ylisto.size(); z++) {
+									int y = ylisto.get(z);
+									if (z < ylisti.size()) {
+										int yi = ylisti.get(z);
+										for (int yl = y; yl >= yi; yl--) {
+											set.add(new PlaceData(x, yl + center.y, z + center.x, data.currentBlock()));
+											set.add(new PlaceData(x, -yl + center.y, z + center.x, data.currentBlock()));
+											set.add(new PlaceData(x, yl + center.y, -z + center.x, data.currentBlock()));
+											set.add(new PlaceData(x, -yl + center.y, -z + center.x, data.currentBlock()));
+										}
+									} else for (int yl = y; yl >= -y; yl--) {
+										set.add(new PlaceData(x, yl + center.y, z + center.x, data.currentBlock()));
+										set.add(new PlaceData(x, yl + center.y, -z + center.x, data.currentBlock()));
+									}
+								}
+							} else {
 								List<Integer> ylist = michenerCircleFragment8(radius);
 								for (int z = 0; z < ylist.size(); z++) {
 									int y = ylist.get(x);
@@ -85,21 +119,6 @@ class Dataadder {
 									set.add(new PlaceData(x, z + center.y, y + center.x, data.currentBlock()));
 									set.add(new PlaceData(x, -y + center.y, -z + center.x, data.currentBlock()));
 								}
-							} else {
-								List<Integer> ylisti = michenerCircleFragment4(radius - 0.5);
-								List<Integer> ylisto = michenerCircleFragment4(radius + 0.5);
-								for (int z = 0; z < ylisto.size(); z++) {
-									int y = ylisto.get(z);
-									if (z < ylisti.size()) {
-										int yi = ylisti.get(z);
-										for (int yl = y; yl >= yi; y--) {
-											set.add(new PlaceData(x, yl + center.y, z + center.x, data.currentBlock()));
-											set.add(
-												new PlaceData(x, -yl + center.y, z + center.x, data.currentBlock()));
-										}
-									} else for (int yl = y; yl >= -y; y--)
-										set.add(new PlaceData(x, yl + center.y, z + center.x, data.currentBlock()));
-								}
 							}
 						}
 					}
@@ -107,10 +126,38 @@ class Dataadder {
 				case Y:
 					if (pos.x.ranged || pos.z.ranged) throw new IllegalStateException();
 					for (int y = pos.y.min; y <= pos.y.max; y++) {
+						double radius = radiusrange.getByRatio(((double) -(pos.y.min - y)) / (pos.y.max - pos.y.min));
 						data.nextBlock();
 						if (data.form.dimension >= h || y == pos.y.min || y == pos.y.max) {
 							final Vec2i center = new Vec2i(pos.x.value, pos.z.value);
-							if (!(boolean) data.getOption("bold")) {
+							if ((boolean) data.getOption("fill")) {
+								List<Integer> zlist = michenerCircleFragment4(radius);
+								for (int x = 0; x < zlist.size(); x++) {
+									int z = zlist.get(x);
+									for (int zl = z; zl >= -z; zl--) {
+										set.add(new PlaceData(x + center.x, y, zl + center.y, data.currentBlock()));
+										set.add(new PlaceData(-x + center.x, y, zl + center.y, data.currentBlock()));
+									}
+								}
+							} else if ((boolean) data.getOption("bold")) {
+								List<Integer> zlisti = michenerCircleFragment4(radius - 0.5);
+								List<Integer> zlisto = michenerCircleFragment4(radius + 0.5);
+								for (int x = 0; x < zlisto.size(); x++) {
+									int z = zlisto.get(x);
+									if (x < zlisti.size()) {
+										int zi = zlisti.get(x);
+										for (int zl = z; zl >= zi; zl--) {
+											set.add(new PlaceData(x + center.x, y, zl + center.y, data.currentBlock()));
+											set.add(new PlaceData(x + center.x, y, -zl + center.y, data.currentBlock()));
+											set.add(new PlaceData(-x + center.x, y, zl + center.y, data.currentBlock()));
+											set.add(new PlaceData(-x + center.x, y, -zl + center.y, data.currentBlock()));
+										}
+									} else for (int zl = z; zl >= -z; zl--) {
+										set.add(new PlaceData(x + center.x, y, zl + center.y, data.currentBlock()));
+										set.add(new PlaceData(-x + center.x, y, zl + center.y, data.currentBlock()));
+									}
+								}
+							} else {
 								List<Integer> zlist = michenerCircleFragment8(radius);
 								for (int x = 0; x < zlist.size(); x++) {
 									int z = zlist.get(x);
@@ -123,21 +170,6 @@ class Dataadder {
 									set.add(new PlaceData(z + center.x, y, x + center.y, data.currentBlock()));
 									set.add(new PlaceData(-x + center.x, y, -z + center.y, data.currentBlock()));
 								}
-							} else {
-								List<Integer> zlisti = michenerCircleFragment4(radius - 0.5);
-								List<Integer> zlisto = michenerCircleFragment4(radius + 0.5);
-								for (int x = 0; x < zlisto.size(); x++) {
-									int z = zlisto.get(x);
-									if (x < zlisti.size()) {
-										int zi = zlisti.get(x);
-										for (int zl = z; zl >= zi; z--) {
-											set.add(new PlaceData(x + center.x, y, zl + center.y, data.currentBlock()));
-											set.add(
-												new PlaceData(x + center.x, y, -zl + center.y, data.currentBlock()));
-										}
-									} else for (int zl = z; zl >= -z; z--)
-										set.add(new PlaceData(x + center.x, y, zl + center.y, data.currentBlock()));
-								}
 							}
 						}
 					}
@@ -145,10 +177,38 @@ class Dataadder {
 				case Z:
 					if (pos.x.ranged || pos.y.ranged) throw new IllegalStateException();
 					for (int z = pos.z.min; z <= pos.z.max; z++) {
+						double radius = radiusrange.getByRatio(((double) -(pos.z.min - z)) / (pos.z.max - pos.z.min));
 						data.nextBlock();
 						if (data.form.dimension >= h || z == pos.z.min || z == pos.z.max) {
 							final Vec2i center = new Vec2i(pos.x.value, pos.y.value);
-							if (!(boolean) data.getOption("bold")) {
+							if ((boolean) data.getOption("fill")) {
+								List<Integer> ylist = michenerCircleFragment4(radius);
+								for (int x = 0; x < ylist.size(); x++) {
+									int y = ylist.get(x);
+									for (int yl = y; yl >= -y; yl--) {
+										set.add(new PlaceData(x + center.x, yl + center.y, z, data.currentBlock()));
+										set.add(new PlaceData(-x + center.x, yl + center.y, z, data.currentBlock()));
+									}
+								}
+							} else if ((boolean) data.getOption("bold")) {
+								List<Integer> ylisti = michenerCircleFragment4(radius - 0.5);
+								List<Integer> ylisto = michenerCircleFragment4(radius + 0.5);
+								for (int x = 0; x < ylisto.size(); x++) {
+									int y = ylisto.get(x);
+									if (x < ylisti.size()) {
+										int yi = ylisti.get(x);
+										for (int yl = y; yl >= yi; yl--) {
+											set.add(new PlaceData(x + center.x, yl + center.y, z, data.currentBlock()));
+											set.add(new PlaceData(x + center.x, -yl + center.y, z, data.currentBlock()));
+											set.add(new PlaceData(-x + center.x, yl + center.y, z, data.currentBlock()));
+											set.add(new PlaceData(-x + center.x, -yl + center.y, z, data.currentBlock()));
+										}
+									} else for (int yl = y; yl >= -y; yl--) {
+										set.add(new PlaceData(x + center.x, yl + center.y, z, data.currentBlock()));
+										set.add(new PlaceData(-x + center.x, yl + center.y, z, data.currentBlock()));
+									}
+								}
+							} else {
 								List<Integer> ylist = michenerCircleFragment8(radius);
 								for (int x = 0; x < ylist.size(); x++) {
 									int y = ylist.get(x);
@@ -160,21 +220,6 @@ class Dataadder {
 									set.add(new PlaceData(y + center.x, -x + center.y, z, data.currentBlock()));
 									set.add(new PlaceData(y + center.x, x + center.y, z, data.currentBlock()));
 									set.add(new PlaceData(-x + center.x, -y + center.y, z, data.currentBlock()));
-								}
-							} else {
-								List<Integer> ylisti = michenerCircleFragment4(radius - 0.5);
-								List<Integer> ylisto = michenerCircleFragment4(radius + 0.5);
-								for (int x = 0; x < ylisto.size(); x++) {
-									int y = ylisto.get(x);
-									if (x < ylisti.size()) {
-										int yi = ylisti.get(x);
-										for (int yl = y; yl >= yi; y--) {
-											set.add(new PlaceData(x + center.x, yl + center.y, z, data.currentBlock()));
-											set.add(
-												new PlaceData(x + center.x, -yl + center.y, z, data.currentBlock()));
-										}
-									} else for (int yl = y; yl >= -y; y--)
-										set.add(new PlaceData(x + center.x, yl + center.y, z, data.currentBlock()));
 								}
 							}
 						}

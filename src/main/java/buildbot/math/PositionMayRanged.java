@@ -34,4 +34,9 @@ public class PositionMayRanged {
 	public PositionMayRanged add(int x, int y, int z) {
 		return new PositionMayRanged(this.x.add(x), this.y.add(y), this.z.add(z));
 	}
+	
+	@Override
+	public String toString() {
+		return x + ", " + y + ", " + z;
+	}
 }

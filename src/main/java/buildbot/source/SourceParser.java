@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.jparsec.Parser;
 import org.jparsec.Parsers;
@@ -15,7 +16,9 @@ import org.jparsec.pattern.Patterns;
 
 import com.google.common.collect.Lists;
 
+import main.java.buildbot.Buildbot;
 import main.java.buildbot.PlaceData;
+import main.java.buildbot.math.DoubleMayRanged;
 import main.java.buildbot.math.IntegerMayRanged;
 import main.java.buildbot.math.PositionMayRanged;
 import net.minecraft.block.Block;
@@ -32,9 +35,7 @@ public class SourceParser {
 	private static Parser<Double> decimal = Parsers.sequence(Scanners.isChar('-').optional(null).source(),
 		Scanners.DEC_INTEGER.or(Scanners.isChar('0').source()), Patterns.FRACTION.toScanner("").optional(null).source(),
 		(a, b, c) -> Double.valueOf(a + b + c));
-	private static Parser<Integer> intspace;
 	private static Parser<IntegerMayRanged> intmayrange;
-	private static Parser<IntegerMayRanged> intmayrangespace;
 	private static Parser<BlockPos> position;
 	private static Parser<PositionMayRanged> positionmayrange;
 	private static Parser<Block> block;
@@ -45,30 +46,37 @@ public class SourceParser {
 	private static Parser<Set<PlaceData>> parser;
 	private static BlockPos offset = new BlockPos(0, 0, 0);
 	private static Parser<String> file;
+	private static Parser<DoubleMayRanged> decimalmayrange;
+	private static Map<String, Object> map = new HashMap<>();
 	
 	private SourceParser() {
 	}
 
 	static {
-		intspace = optAroundSpace(integer);
 		intmayrange = infixlonce(integer, integer, "~", (a, b) -> new IntegerMayRanged(a, b))
 				.or(integer.map((i) -> new IntegerMayRanged(i)));
-		intmayrangespace = optAroundSpace(intmayrange);
 		
-		position = ignoresideoption(Scanners.isChar('('),
-			Parsers.sequence(Scanners.isChar('~').retn(true).optional(false), intspace.followedBy(Scanners.isChar(',')),
-				intspace.followedBy(Scanners.isChar(',')), intspace,
-				(p, x, y, z) -> p ? new BlockPos(MathHelper.floor(Minecraft.getMinecraft().player.posX) + x,
-				MathHelper.floor(Minecraft.getMinecraft().player.posY) + y,
-				MathHelper.floor(Minecraft.getMinecraft().player.posZ) + z) : new BlockPos(x, y, z)),
+		decimalmayrange = infixlonce(decimal, decimal, "~", (a, b) -> new DoubleMayRanged(a, b))
+				.or(decimal.map((i) -> new DoubleMayRanged(i)));
+		
+		position = ignoresideoption(Scanners.isChar('('), Parsers.sequence(
+			optAroundSpace(inclusiveOr(Scanners.isChar('~').retn(MathHelper.floor(Minecraft.getMinecraft().player.posX)),
+				integer, Integer::sum)).followedBy(Scanners.isChar(',')),
+			optAroundSpace(inclusiveOr(Scanners.isChar('~').retn(MathHelper.floor(Minecraft.getMinecraft().player.posY)),
+				integer, Integer::sum)).followedBy(Scanners.isChar(',')),
+			optAroundSpace(inclusiveOr(Scanners.isChar('~').retn(MathHelper.floor(Minecraft.getMinecraft().player.posZ)), 
+				integer, Integer::sum)),
+				(x, y, z) -> new BlockPos(x, y, z)),
 			Scanners.isChar(')'));
 
-		positionmayrange = ignoresideoption(Scanners.isChar('('),
-			Parsers.sequence(Scanners.isChar('~').retn(true).optional(false), intmayrangespace.followedBy(Scanners.isChar(',')),
-				intmayrangespace.followedBy(Scanners.isChar(',')), intmayrangespace,
-				(p, x, y, z) -> p ? new PositionMayRanged(x, y, z).add(
-				MathHelper.floor(Minecraft.getMinecraft().player.posX), MathHelper.floor(Minecraft.getMinecraft().player.posY),
-				MathHelper.floor(Minecraft.getMinecraft().player.posZ)) : new PositionMayRanged(x, y, z)),
+		positionmayrange = ignoresideoption(Scanners.isChar('('), Parsers.sequence(
+			optAroundSpace(inclusiveOr(Scanners.isChar('~').retn(MathHelper.floor(Minecraft.getMinecraft().player.posX)),
+				intmayrange, IntegerMayRanged::new, Function.identity(), IntegerMayRanged::add)).followedBy(Scanners.isChar(',')),
+			optAroundSpace(inclusiveOr(Scanners.isChar('~').retn(MathHelper.floor(Minecraft.getMinecraft().player.posY)),
+				intmayrange, IntegerMayRanged::new, Function.identity(), IntegerMayRanged::add)).followedBy(Scanners.isChar(',')),
+			optAroundSpace(inclusiveOr(Scanners.isChar('~').retn(MathHelper.floor(Minecraft.getMinecraft().player.posZ)),
+				intmayrange, IntegerMayRanged::new, Function.identity(), IntegerMayRanged::add)),
+			(x, y, z) -> new PositionMayRanged(x, y, z)),
 			Scanners.isChar(')'));
 
 		block = Scanners.ANY_CHAR.until(Scanners.WHITESPACES.or(Scanners.isChar(',')).or(Scanners.isChar(')')))
@@ -94,8 +102,9 @@ public class SourceParser {
 					form.options.put("axis", Scanners
 							.isChar(CharPredicates.or(CharPredicates.range('x', 'z'), CharPredicates.range('X', 'Z')))
 							.source().map(ch -> Axis.byName(ch)));
-					form.options.put("radius", decimal);
+					form.options.put("radius", decimalmayrange);
 					form.flags.add("bold");
+					form.flags.add("fill");
 					break;
 			}
 			formparsers.add(Scanners.stringCaseInsensitive(form.toString()).retn(form));
@@ -117,18 +126,17 @@ public class SourceParser {
 							return Parsers.fail("on 3D shape, multiple block variant must be cube number");
 				}
 			}
-			Map<String, Object> map = new HashMap<>();
 			Parser.Reference<Map<String, Object>> ref = Parser.newReference();
-			ref.set(Scanners.ANY_CHAR.until(Scanners.WHITESPACES.or(Scanners.isChar(':'))).source().next(key -> {
+			ref.set(Scanners.ANY_CHAR.until(Scanners.WHITESPACES.or(Scanners.isChar(':')).or(Scanners.isChar(')'))).source().next(key -> {
 				if (o.getSecond().options.containsKey(key))
 					return optAroundSpace(Scanners.isChar(':')).next(o.getSecond().getOption(key).next(value -> {
 						map.put(key, value);
 						return commamayrangespace.next(ref.get()).optional(map).retn(map);
 					}));
-				else if (o.getSecond().flags.contains(key)) return commamayrangespace.next(d -> {
+				else if (o.getSecond().flags.contains(key)) {
 					map.put(key, true);
-					return ref.get();
-				}).optional(map).retn(map);
+					return commamayrangespace.next(ref.get()).optional(map).retn(map);
+				}
 				return Parsers.fail("invaild option name " + key);
 			}));
 			return ref.get().between(Scanners.isChar('('), Scanners.isChar(')')).atomic().optional(map).retn(map)
@@ -165,10 +173,12 @@ public class SourceParser {
 	}
 	
 	public static Set<PlaceData> parse(String source) {
+		Buildbot.LOGGER.info("offset is: " + offset);
 		Set<PlaceData> set = new HashSet<>();
 		for (String line : source.split("\n")) {
 			if (line.indexOf('#') != -1) line = line.substring(0, line.indexOf('#'));
 			set.addAll(parser.parse(line));
+			map = new HashMap<>();
 		}
 		return set;
 	}
@@ -192,6 +202,14 @@ public class SourceParser {
 	private static <L, R, T> Parser<T> infixloncespacerequired(Parser<L> left, Parser<R> right, String name,
 			BiFunction<L, R, T> c) {
 		return left.followedBy(aroundSpace(Scanners.string(name))).next(l -> right.map((r) -> c.apply(l, r)));
+	}
+	
+	private static <T> Parser<T> inclusiveOr(Parser<T> left, Parser<T> right, BiFunction<T, T, T> c) {
+		return inclusiveOr(left, right, Function.identity(), Function.identity(), c);
+	}
+	
+	private static <T, A, B> Parser<T> inclusiveOr(Parser<A> left, Parser<B> right, Function<A, T> fl, Function<B, T> fr, BiFunction<A, B, T> c) {
+		return Parsers.or(Parsers.sequence(left, right, c), left.map(fl), right.map(fr));
 	}
 
 	public static boolean isSquareNumber(long x) {
