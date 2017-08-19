@@ -76,7 +76,7 @@ public class BuildBotAI {
 		if (timeOut == 0) {
 			timeOut = -1;
 			resetClickState();
-			Buildbot.LOGGER.warn(I18n.format("buildbot.error.placetimeout"));
+			player.sendMessage(new TextComponentTranslation("buildbot.error.placetimeout", Buildbot.smartString(place.pos)));
 			stopping = true;
 			return;
 		}

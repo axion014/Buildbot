@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.jparsec.Parser;
 import org.jparsec.Parsers;
@@ -43,11 +44,11 @@ public class SourceParser {
 	private static Parser<StructDataUnit> pattern;
 	private static Parser<Void> commamayrangespace = optAroundSpace(Scanners.isChar(','));
 	private static Parser<List<Block>> multipleblock;
-	private static Parser<Set<PlaceData>> parser;
+	private static Parser<Map<BlockPos, Block>> parser;
 	private static BlockPos offset = new BlockPos(0, 0, 0);
 	private static Parser<String> file;
 	private static Parser<DoubleMayRanged> decimalmayrange;
-	private static Map<String, Object> map = new HashMap<>();
+	private static Map<String, Object> optionmap = new HashMap<>();
 	
 	private SourceParser() {
 	}
@@ -130,16 +131,16 @@ public class SourceParser {
 			ref.set(Scanners.ANY_CHAR.until(Scanners.WHITESPACES.or(Scanners.isChar(':')).or(Scanners.isChar(')'))).source().next(key -> {
 				if (o.getSecond().options.containsKey(key))
 					return optAroundSpace(Scanners.isChar(':')).next(o.getSecond().getOption(key).next(value -> {
-						map.put(key, value);
-						return commamayrangespace.next(ref.get()).optional(map).retn(map);
+						optionmap.put(key, value);
+						return commamayrangespace.next(ref.get()).optional(optionmap).retn(optionmap);
 					}));
 				else if (o.getSecond().flags.contains(key)) {
-					map.put(key, true);
-					return commamayrangespace.next(ref.get()).optional(map).retn(map);
+					optionmap.put(key, true);
+					return commamayrangespace.next(ref.get()).optional(optionmap).retn(optionmap);
 				}
 				return Parsers.fail("invaild option name " + key);
 			}));
-			return ref.get().between(Scanners.isChar('('), Scanners.isChar(')')).atomic().optional(map).retn(map)
+			return ref.get().between(Scanners.isChar('('), Scanners.isChar(')')).atomic().optional(optionmap).retn(optionmap)
 					.map(op -> {
 						o.getSecond().options.keySet().forEach((key) -> {
 							if (!op.containsKey(key)) {
@@ -165,22 +166,28 @@ public class SourceParser {
 		});
 		parser = Parsers.or(infixloncespacerequired(file, position, PLACE_OP, (data, pos) -> {
 			offset = offset.add(pos);
-			Set<PlaceData> result = parse(data);
+			Map<BlockPos, Block> result = parseimpl(data);
 			offset = offset.subtract(pos);
 			return result;
-		}).atomic(), file.map(SourceParser::parse), infixloncespacerequired(pattern, positionmayrange, PLACE_OP, (data, pos) -> Dataadder.bringData(data, pos.add(offset)))
-				.atomic(), Parsers.EOF.retn(Collections.emptySet()));
+		}).atomic(), file.map(SourceParser::parseimpl), infixloncespacerequired(pattern, positionmayrange, PLACE_OP, (data, pos) -> Dataadder.bringData(data, pos.add(offset)))
+				.atomic(), Parsers.EOF.retn(Collections.emptyMap()));
+	}
+	
+	private static Map<BlockPos, Block> parseimpl(String source) {
+		Buildbot.LOGGER.info("offset is: " + offset);
+		Map<BlockPos, Block> map = new HashMap<>();
+		for (String line : source.split("\n")) {
+			if (line.indexOf('#') != -1) line = line.substring(0, line.indexOf('#'));
+			map.putAll(parser.parse(line));
+			optionmap = new HashMap<>();
+		}
+		Buildbot.LOGGER.info(Arrays.toString(map.entrySet().toArray()));
+		return map;
 	}
 	
 	public static Set<PlaceData> parse(String source) {
-		Buildbot.LOGGER.info("offset is: " + offset);
-		Set<PlaceData> set = new HashSet<>();
-		for (String line : source.split("\n")) {
-			if (line.indexOf('#') != -1) line = line.substring(0, line.indexOf('#'));
-			set.addAll(parser.parse(line));
-			map = new HashMap<>();
-		}
-		return set;
+		return parseimpl(source).entrySet().parallelStream().map(e -> new PlaceData(e.getKey(), e.getValue()))
+				.collect(Collectors.toCollection(HashSet::new));
 	}
 
 	private static <T> Parser<T> ignoresideoption(Parser<?> left, Parser<T> center, Parser<?> right) {

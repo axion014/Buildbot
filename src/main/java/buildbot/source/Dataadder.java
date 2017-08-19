@@ -3,7 +3,6 @@ package main.java.buildbot.source;
 import java.util.*;
 
 import main.java.buildbot.Buildbot;
-import main.java.buildbot.PlaceData;
 import main.java.buildbot.math.DoubleMayRanged;
 import main.java.buildbot.math.PositionMayRanged;
 import main.java.buildbot.math.Vec2i;
@@ -16,13 +15,13 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3i;
 
 class Dataadder {
-	static Set<PlaceData> bringData(StructDataUnit data, PositionMayRanged pos) {
+	static Map<BlockPos, Block> bringData(StructDataUnit data, PositionMayRanged pos) {
 		Buildbot.LOGGER.info("options is:");
 		data.options.forEach((k, v) -> Buildbot.LOGGER.info("  " + k + ": " + v));
-		Set<PlaceData> set = new HashSet<>();
+		Map<BlockPos, Block> map = new HashMap<>();
 		if (pos.getRangeLevel() != data.form.dimension) throw new IllegalStateException("Wrong ranged axis count");
 		if (data.form == Forms.BLOCK) return Collections
-				.singleton(new PlaceData(new BlockPos(pos.x.value, pos.y.value, pos.z.value), data.currentBlock()));
+				.singletonMap(new BlockPos(pos.x.value, pos.y.value, pos.z.value), data.currentBlock());
 		if (data.form.type == Forms.Type.CUBIC) {
 			int h = data.getOption("hollow", new Integer[0]) + 3 - data.form.dimension;
 			int length;
@@ -60,8 +59,8 @@ class Dataadder {
 						if (yedged) edgeLevel++;
 						if (z == pos.z.min || z == pos.z.max) edgeLevel++;
 						if (edgeLevel >= h)
-							set.add(new PlaceData(x, y, z, blocks[(x - pos.x.min) % blockpatsize.getX()][(y - pos.y.min)
-									% blockpatsize.getY()][(z - pos.z.min) % blockpatsize.getZ()]));
+							map.put(new BlockPos(x, y, z), blocks[(x - pos.x.min) % blockpatsize.getX()][(y - pos.y.min)
+									% blockpatsize.getY()][(z - pos.z.min) % blockpatsize.getZ()]);
 					}
 				}
 			}
@@ -84,8 +83,8 @@ class Dataadder {
 								for (int z = 0; z < ylist.size(); z++) {
 									int y = ylist.get(z);
 									for (int yl = y; yl >= -y; yl--) {
-										set.add(new PlaceData(x, yl + center.y, z + center.x, data.currentBlock()));
-										set.add(new PlaceData(x, yl + center.y, -z + center.x, data.currentBlock()));
+										map.put(new BlockPos(x, yl + center.y, z + center.x), data.currentBlock());
+										map.put(new BlockPos(x, yl + center.y, -z + center.x), data.currentBlock());
 									}
 								}
 							} else if ((boolean) data.getOption("bold")) {
@@ -96,28 +95,28 @@ class Dataadder {
 									if (z < ylisti.size()) {
 										int yi = ylisti.get(z);
 										for (int yl = y; yl >= yi; yl--) {
-											set.add(new PlaceData(x, yl + center.y, z + center.x, data.currentBlock()));
-											set.add(new PlaceData(x, -yl + center.y, z + center.x, data.currentBlock()));
-											set.add(new PlaceData(x, yl + center.y, -z + center.x, data.currentBlock()));
-											set.add(new PlaceData(x, -yl + center.y, -z + center.x, data.currentBlock()));
+											map.put(new BlockPos(x, yl + center.y, z + center.x), data.currentBlock());
+											map.put(new BlockPos(x, -yl + center.y, z + center.x), data.currentBlock());
+											map.put(new BlockPos(x, yl + center.y, -z + center.x), data.currentBlock());
+											map.put(new BlockPos(x, -yl + center.y, -z + center.x), data.currentBlock());
 										}
 									} else for (int yl = y; yl >= -y; yl--) {
-										set.add(new PlaceData(x, yl + center.y, z + center.x, data.currentBlock()));
-										set.add(new PlaceData(x, yl + center.y, -z + center.x, data.currentBlock()));
+										map.put(new BlockPos(x, yl + center.y, z + center.x), data.currentBlock());
+										map.put(new BlockPos(x, yl + center.y, -z + center.x), data.currentBlock());
 									}
 								}
 							} else {
 								List<Integer> ylist = michenerCircleFragment8(radius);
 								for (int z = 0; z < ylist.size(); z++) {
 									int y = ylist.get(x);
-									set.add(new PlaceData(x, y + center.y, z + center.x, data.currentBlock()));
-									set.add(new PlaceData(x, -z + center.y, -y + center.x, data.currentBlock()));
-									set.add(new PlaceData(x, z + center.y, -y + center.x, data.currentBlock()));
-									set.add(new PlaceData(x, -y + center.y, z + center.x, data.currentBlock()));
-									set.add(new PlaceData(x, y + center.y, -z + center.x, data.currentBlock()));
-									set.add(new PlaceData(x, -z + center.y, y + center.x, data.currentBlock()));
-									set.add(new PlaceData(x, z + center.y, y + center.x, data.currentBlock()));
-									set.add(new PlaceData(x, -y + center.y, -z + center.x, data.currentBlock()));
+									map.put(new BlockPos(x, y + center.y, z + center.x), data.currentBlock());
+									map.put(new BlockPos(x, -z + center.y, -y + center.x), data.currentBlock());
+									map.put(new BlockPos(x, z + center.y, -y + center.x), data.currentBlock());
+									map.put(new BlockPos(x, -y + center.y, z + center.x), data.currentBlock());
+									map.put(new BlockPos(x, y + center.y, -z + center.x), data.currentBlock());
+									map.put(new BlockPos(x, -z + center.y, y + center.x), data.currentBlock());
+									map.put(new BlockPos(x, z + center.y, y + center.x), data.currentBlock());
+									map.put(new BlockPos(x, -y + center.y, -z + center.x), data.currentBlock());
 								}
 							}
 						}
@@ -135,8 +134,8 @@ class Dataadder {
 								for (int x = 0; x < zlist.size(); x++) {
 									int z = zlist.get(x);
 									for (int zl = z; zl >= -z; zl--) {
-										set.add(new PlaceData(x + center.x, y, zl + center.y, data.currentBlock()));
-										set.add(new PlaceData(-x + center.x, y, zl + center.y, data.currentBlock()));
+										map.put(new BlockPos(x + center.x, y, zl + center.y), data.currentBlock());
+										map.put(new BlockPos(-x + center.x, y, zl + center.y), data.currentBlock());
 									}
 								}
 							} else if ((boolean) data.getOption("bold")) {
@@ -147,28 +146,28 @@ class Dataadder {
 									if (x < zlisti.size()) {
 										int zi = zlisti.get(x);
 										for (int zl = z; zl >= zi; zl--) {
-											set.add(new PlaceData(x + center.x, y, zl + center.y, data.currentBlock()));
-											set.add(new PlaceData(x + center.x, y, -zl + center.y, data.currentBlock()));
-											set.add(new PlaceData(-x + center.x, y, zl + center.y, data.currentBlock()));
-											set.add(new PlaceData(-x + center.x, y, -zl + center.y, data.currentBlock()));
+											map.put(new BlockPos(x + center.x, y, zl + center.y), data.currentBlock());
+											map.put(new BlockPos(x + center.x, y, -zl + center.y), data.currentBlock());
+											map.put(new BlockPos(-x + center.x, y, zl + center.y), data.currentBlock());
+											map.put(new BlockPos(-x + center.x, y, -zl + center.y), data.currentBlock());
 										}
 									} else for (int zl = z; zl >= -z; zl--) {
-										set.add(new PlaceData(x + center.x, y, zl + center.y, data.currentBlock()));
-										set.add(new PlaceData(-x + center.x, y, zl + center.y, data.currentBlock()));
+										map.put(new BlockPos(x + center.x, y, zl + center.y), data.currentBlock());
+										map.put(new BlockPos(-x + center.x, y, zl + center.y), data.currentBlock());
 									}
 								}
 							} else {
 								List<Integer> zlist = michenerCircleFragment8(radius);
 								for (int x = 0; x < zlist.size(); x++) {
 									int z = zlist.get(x);
-									set.add(new PlaceData(x + center.x, y, z + center.y, data.currentBlock()));
-									set.add(new PlaceData(-z + center.x, y, -x + center.y, data.currentBlock()));
-									set.add(new PlaceData(-z + center.x, y, x + center.y, data.currentBlock()));
-									set.add(new PlaceData(x + center.x, y, -z + center.y, data.currentBlock()));
-									set.add(new PlaceData(-x + center.x, y, z + center.y, data.currentBlock()));
-									set.add(new PlaceData(z + center.x, y, -x + center.y, data.currentBlock()));
-									set.add(new PlaceData(z + center.x, y, x + center.y, data.currentBlock()));
-									set.add(new PlaceData(-x + center.x, y, -z + center.y, data.currentBlock()));
+									map.put(new BlockPos(x + center.x, y, z + center.y), data.currentBlock());
+									map.put(new BlockPos(-z + center.x, y, -x + center.y), data.currentBlock());
+									map.put(new BlockPos(-z + center.x, y, x + center.y), data.currentBlock());
+									map.put(new BlockPos(x + center.x, y, -z + center.y), data.currentBlock());
+									map.put(new BlockPos(-x + center.x, y, z + center.y), data.currentBlock());
+									map.put(new BlockPos(z + center.x, y, -x + center.y), data.currentBlock());
+									map.put(new BlockPos(z + center.x, y, x + center.y), data.currentBlock());
+									map.put(new BlockPos(-x + center.x, y, -z + center.y), data.currentBlock());
 								}
 							}
 						}
@@ -186,8 +185,8 @@ class Dataadder {
 								for (int x = 0; x < ylist.size(); x++) {
 									int y = ylist.get(x);
 									for (int yl = y; yl >= -y; yl--) {
-										set.add(new PlaceData(x + center.x, yl + center.y, z, data.currentBlock()));
-										set.add(new PlaceData(-x + center.x, yl + center.y, z, data.currentBlock()));
+										map.put(new BlockPos(x + center.x, yl + center.y, z), data.currentBlock());
+										map.put(new BlockPos(-x + center.x, yl + center.y, z), data.currentBlock());
 									}
 								}
 							} else if ((boolean) data.getOption("bold")) {
@@ -198,28 +197,28 @@ class Dataadder {
 									if (x < ylisti.size()) {
 										int yi = ylisti.get(x);
 										for (int yl = y; yl >= yi; yl--) {
-											set.add(new PlaceData(x + center.x, yl + center.y, z, data.currentBlock()));
-											set.add(new PlaceData(x + center.x, -yl + center.y, z, data.currentBlock()));
-											set.add(new PlaceData(-x + center.x, yl + center.y, z, data.currentBlock()));
-											set.add(new PlaceData(-x + center.x, -yl + center.y, z, data.currentBlock()));
+											map.put(new BlockPos(x + center.x, yl + center.y, z), data.currentBlock());
+											map.put(new BlockPos(x + center.x, -yl + center.y, z), data.currentBlock());
+											map.put(new BlockPos(-x + center.x, yl + center.y, z), data.currentBlock());
+											map.put(new BlockPos(-x + center.x, -yl + center.y, z), data.currentBlock());
 										}
 									} else for (int yl = y; yl >= -y; yl--) {
-										set.add(new PlaceData(x + center.x, yl + center.y, z, data.currentBlock()));
-										set.add(new PlaceData(-x + center.x, yl + center.y, z, data.currentBlock()));
+										map.put(new BlockPos(x + center.x, yl + center.y, z), data.currentBlock());
+										map.put(new BlockPos(-x + center.x, yl + center.y, z), data.currentBlock());
 									}
 								}
 							} else {
 								List<Integer> ylist = michenerCircleFragment8(radius);
 								for (int x = 0; x < ylist.size(); x++) {
 									int y = ylist.get(x);
-									set.add(new PlaceData(x + center.x, y + center.y, z, data.currentBlock()));
-									set.add(new PlaceData(-y + center.x, -x + center.y, z, data.currentBlock()));
-									set.add(new PlaceData(-y + center.x, x + center.y, z, data.currentBlock()));
-									set.add(new PlaceData(x + center.x, -y + center.y, z, data.currentBlock()));
-									set.add(new PlaceData(-x + center.x, y + center.y, z, data.currentBlock()));
-									set.add(new PlaceData(y + center.x, -x + center.y, z, data.currentBlock()));
-									set.add(new PlaceData(y + center.x, x + center.y, z, data.currentBlock()));
-									set.add(new PlaceData(-x + center.x, -y + center.y, z, data.currentBlock()));
+									map.put(new BlockPos(x + center.x, y + center.y, z), data.currentBlock());
+									map.put(new BlockPos(-y + center.x, -x + center.y, z), data.currentBlock());
+									map.put(new BlockPos(-y + center.x, x + center.y, z), data.currentBlock());
+									map.put(new BlockPos(x + center.x, -y + center.y, z), data.currentBlock());
+									map.put(new BlockPos(-x + center.x, y + center.y, z), data.currentBlock());
+									map.put(new BlockPos(y + center.x, -x + center.y, z), data.currentBlock());
+									map.put(new BlockPos(y + center.x, x + center.y, z), data.currentBlock());
+									map.put(new BlockPos(-x + center.x, -y + center.y, z), data.currentBlock());
 								}
 							}
 						}
@@ -227,7 +226,7 @@ class Dataadder {
 					break;
 			}
 		}
-		return set;
+		return map;
 	}
 
 	private static List<Integer> michenerCircleFragment8(double radius) {
